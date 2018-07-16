@@ -1,6 +1,7 @@
 import platform
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 from os import listdir
+from datetime import datetime
 
 if platform.python_version() != "2.7.12":
 	print "warning: this script has been tested only on Python version 2.7.12, yours is different"
@@ -35,7 +36,7 @@ for photo in photos:
 
 # create the output image
 print "creating image with width:", width_total
-collage = Image.new('RGB', (width_total, height_min))
+collage = Image.new('RGBA', (width_total, height_min))
 
 # append photos to the output image:
 offset = 0
@@ -44,4 +45,32 @@ for photo in resized_photos:
 	collage.paste(photo, (offset, 0))
 	offset += photo.size[0]
 
-collage.save("collage.jpg")
+# texts
+offset = 0
+i = 0
+for photo in resized_photos:
+	txt = Image.new('RGBA', (width_total, height_min), (255,255,255,0))
+	fnt = ImageFont.truetype('/usr/share/fonts/TTF/DejaVuSansMono.ttf', 30)
+	d = ImageDraw.Draw(txt)
+
+	if i == 0:
+		first_day = datetime.strptime(photo_names[i].split('_')[0], "%Y-%m-%d")
+		first_weight = 0.1*int(photo_names[i].split('_')[1].split('.')[0])
+	else:
+		day = str(abs(first_day - datetime.strptime(photo_names[i].split('_')[0], "%Y-%m-%d")).days) + " days"
+		d.text((offset+20, 10), day, font=fnt, fill=(255, 255, 255, 255))
+		
+		weight = 0.1*int(photo_names[i].split('_')[1].split('.')[0])
+
+		if weight > first_weight:
+			weight = "+" + str(weight - first_weight) + " kg"
+			d.text((offset+20, 40), weight, font=fnt, fill=(255, 150, 150, 255))
+		else:
+			weight = "-" + str(first_weight - weight) + " kg"
+			d.text((offset+20, 40), weight, font=fnt, fill=(150, 255, 150, 255))
+
+	collage = Image.alpha_composite(collage, txt)
+	offset += photo.size[0]
+	i = i + 1
+
+collage.save("collage.png")
